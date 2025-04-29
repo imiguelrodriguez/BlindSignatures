@@ -1,13 +1,20 @@
 # prover.py
 import socket
+
+from Crypto.Hash import SHA256
 from Crypto.PublicKey import RSA
 from Crypto.Util.number import getRandomRange, inverse
 
 HOST = 'localhost'
 PORT = 5000
 
-# Message to be signed (as integer)
-m = 123456789
+
+# Ask for message from user
+message = input("Enter the message to be blindly signed: ")
+
+# Hash the message (SHA-256)
+hash_obj = SHA256.new(message.encode())
+m = int.from_bytes(hash_obj.digest(), byteorder='big')
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     s.connect((HOST, PORT))
