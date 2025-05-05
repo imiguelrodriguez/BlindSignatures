@@ -1,20 +1,15 @@
 # prover.py
 import socket
-
-from Crypto.Hash import SHA256
 from Crypto.PublicKey import RSA
 from Crypto.Util.number import getRandomRange, inverse
+from Crypto.Hash import SHA256
 
 HOST = 'localhost'
 PORT = 5000
 
-
-# Ask for message from user
-message = input("Enter the message to be blindly signed: ")
-
-# Hash the message (SHA-256)
-hash_obj = SHA256.new(message.encode())
-m = int.from_bytes(hash_obj.digest(), byteorder='big')
+def hash_message(message):
+    hash_obj = SHA256.new(message.encode())
+    return int.from_bytes(hash_obj.digest(), byteorder='big')
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     s.connect((HOST, PORT))
@@ -25,22 +20,35 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     n = pubkey.n
     e = pubkey.e
 
-    # Generate r and compute m' = m * r^e mod n
-    r = getRandomRange(2, n - 1)
-    r_e = pow(r, e, n)
-    m_prime = (m * r_e) % n
-    s.sendall(str(m_prime).encode())
-    print(f"Sent m': {m_prime}")
+    print("\nStart sending messages for blind signing.")
+    print("Type 'exit' to quit.\n")
 
-    # Receive s' from issuer
-    s_prime = int(s.recv(4096).decode())
-    print(f"Received s': {s_prime}")
+    while True:
+        message = input("Message to sign > ")
+        if message.lower() == 'exit':
+            s.sendall(b"exit")
+            print("Session ended.")
+            break
 
-    # Unblind: s = s' * r^-1 mod n
-    r_inv = inverse(r, n)
-    s_final = (s_prime * r_inv) % n
-    print(f"Signature s on m: {s_final}")
+        m = hash_message(message)
 
-    # Optional: verify
-    assert pow(s_final, e, n) == m
-    print("Signature verified.")
+        r = getRandomRange(2, n - 1)
+        r_e = pow(r, e, n)
+        m_prime = (m * r_e) % n
+
+        s.sendall(str(m_prime).encode())
+        s_prime = int(s.recv(4096).decode())
+
+        r_inv = inverse(r, n)
+        s_final = (s_prime * r_inv) % n
+
+        tamper = input("Tamper with signature? (y/n): ").strip().lower()
+        if tamper == 'y':
+            s_final = (s_final + 1) % n  # Corrupt it slightly
+
+        print(f"Signature: {s_final}")
+        try:
+            assert pow(s_final, e, n) == m
+            print("→ Signature verified ✅\n")
+        except AssertionError:
+            print("→ Signature failed ❌\n")
