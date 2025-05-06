@@ -1,6 +1,5 @@
 # https://datatracker.ietf.org/doc/rfc9474/
 # issuer.py
-# issuer.py
 import socket
 from Crypto.PublicKey import RSA
 from Crypto.Util.number import inverse
