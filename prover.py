@@ -15,7 +15,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     s.connect((HOST, PORT))
 
     # Receive public key
-    pubkey_data = s.recv(2048)
+    pubkey_data = s.recv(1024)
     pubkey = RSA.import_key(pubkey_data)
     n = pubkey.n
     e = pubkey.e
